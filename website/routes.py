@@ -3,17 +3,26 @@ import secrets
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request, abort
 from website import app, db, bcrypt
-from website.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm
+from website.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, EmptyForm
 from website.models import User, Post
 from flask_login import login_user, current_user, logout_user, login_required
 
 
-@app.route("/")
-@app.route("/home")
-def home():
-    posts = Post.query.all()
-    return render_template('home.html', posts=posts)
 
+@app.route("/home")
+
+def home():
+    if current_user.is_authenticated:
+        cur_usr_name = current_user.username
+    else:
+        cur_usr_name = "NONE"
+    
+    page = request.args.get('page', 1, type=int)
+    #posts = Post.query.paginate(page = page, per_page = 1)
+    users = User.query.paginate(page = page, per_page = 1)
+    
+    form = EmptyForm()
+    return render_template('home.html', users=users, form=form)
 
 @app.route("/about")
 def about():
@@ -51,10 +60,20 @@ def login():
     return render_template('login.html', title='Login', form=form)
 
 
+@app.route('/user/<username>')
+@login_required
+def user(username):
+    page = request.args.get('page', 1, type=int)
+    posts = Post.query.paginate(page = page, per_page = 1)
+    users = User.query.paginate(page = page, per_page = 1)
+    form = EmptyForm()
+    return render_template('home.html', users=users, posts=posts, form=form)
+
+@app.route("/")
 @app.route("/logout")
 def logout():
     logout_user()
-    return redirect(url_for('home'))
+    return redirect(url_for('login'))
 
 
 def save_picture(form_picture):
@@ -63,7 +82,7 @@ def save_picture(form_picture):
     picture_fn = random_hex + f_ext
     picture_path = os.path.join(app.root_path, 'static/uploads/', picture_fn)
 
-    output_size = (125, 125)
+    output_size = (400, 400)
     i = Image.open(form_picture)
     i.thumbnail(output_size)
     i.save(picture_path)
@@ -81,12 +100,14 @@ def account():
             current_user.image_file = picture_file
         current_user.username = form.username.data
         current_user.email = form.email.data
+        current_user.bio = form.bio.data
         db.session.commit()
         flash('Your account has been updated!', 'success')
         return redirect(url_for('account'))
     elif request.method == 'GET':
         form.username.data = current_user.username
         form.email.data = current_user.email
+        form.bio.data = current_user.bio
     image_file = url_for('static', filename='uploads/' + current_user.image_file)
     return render_template('account.html', title='Account',
                            image_file=image_file, form=form)
@@ -105,6 +126,9 @@ def new_post():
 
 
     return render_template('create_post.html', title='New Post', form=form, legend = 'New Post')
+
+
+
 
 
 @app.route("/post/<int:post_id>")
@@ -142,3 +166,68 @@ def delete_post(post_id):
     db.session.commit()
     flash('Your post has been deleted!', 'success')
     return redirect(url_for('home'))
+
+
+@app.route("/liked/<int:user_id>", methods=['POST'])
+@login_required
+def liked(user_id):
+    liked_user = User.query(user_id)
+    if user.id == current_user:
+        abort(403)
+
+    
+    print("got this far")
+    print(user_id)
+    
+    #liked = Likes(current_user= current_user, liked_user = user_id)
+    #db.session.add(liked)
+    #db.session.commit()
+    
+    #flash('like has been added!', 'success')
+    return redirect(url_for('home'))
+
+
+@app.route('/follow/<username>', methods=['POST'])
+@login_required
+def follow(username):
+    form = EmptyForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=username).first()
+        if user is None:
+            flash('User {} not found.'.format(username))
+            return redirect(url_for('index'))
+        if user == current_user:
+            flash('You should love yourself but you cant like yourself!')
+            return redirect(url_for('user', username=username))
+        current_user.follow(user)
+        db.session.commit()
+        flash('You liked {}!'.format(username))
+        return redirect(url_for('user', username=username))
+    else:
+        return redirect(url_for('index'))
+
+@app.route('/unfollow/<username>', methods=['POST'])
+@login_required
+def unfollow(username):
+    form = EmptyForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=username).first()
+        if user is None:
+            flash('User {} not found.'.format(username))
+            return redirect(url_for('index'))
+        if user == current_user:
+            flash('You should love yourself but you cant unlike yourself!')
+            return redirect(url_for('user', username=username))
+        current_user.unfollow(user)
+        db.session.commit()
+        flash('You unliked {}.'.format(username))
+        return redirect(url_for('user', username=username))
+    else:
+        return redirect(url_for('index'))
+
+@app.route("/matched", methods=['GET'])
+@login_required
+def matched():
+        #users = User.query.all()
+        matches = current_user.followed_posts().all()
+        return render_template('matched.html', title='Matched', matches = matches)

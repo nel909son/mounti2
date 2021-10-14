@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+    
+    <p>MATCHES: </p>
+    {% if matches %}
+
+
+    {% for match in matches %}
+        {% if match.is_following(current_user) %}
+         <img  style="max-width: 20%"class="img-fluid article-img" src="{{ url_for('static', filename='uploads/' + match.image_file) }}">
+        <p> {{ match.username }}</p>
+        <p> {{ match.email }}</p>
+        {% endif %}
+    {% endfor %}
+    {% else %}
+        <p>NO MATCHES YET</p>
+
+   
+    
+    {% endif %}
+        
+
+{% endblock content %}
