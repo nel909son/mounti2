@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-    <div class="content-section">
+    <div class="content-section" >
       <div class="media">
-        <img class="rounded-circle account-img" src="{{ image_file }}">
+        <img class="rounded-circle" style="max-width: 400px;" src="{{ image_file }}">
         <div class="media-body">
           <h2 class="account-heading">{{ current_user.username }}</h2>
           <p class="text-secondary">{{ current_user.email }}</p>
@@ -62,9 +62,14 @@
                     {% endif %}
                 </div>
             </fieldset>
-            <div class="form-group">
+            <div class="form-group" >
                 {{ form.submit(class="btn btn-outline-info") }}
             </div>
         </form>
+        <form action="{{ url_for('delete_user', user_id=user.id) }}" method="post">
+                {{ form.hidden_tag() }}
+                {{ form.submit(value='Delete Account') }}
+            </form>
+        
     </div>
 {% endblock content %}

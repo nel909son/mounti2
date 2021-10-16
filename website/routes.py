@@ -3,8 +3,8 @@ import secrets
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request, abort
 from website import app, db, bcrypt
-from website.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, EmptyForm
-from website.models import User, Post
+from website.forms import RegistrationForm, LoginForm, UpdateAccountForm, EmptyForm
+from website.models import User
 from flask_login import login_user, current_user, logout_user, login_required
 
 
@@ -110,81 +110,11 @@ def account():
         form.bio.data = current_user.bio
     image_file = url_for('static', filename='uploads/' + current_user.image_file)
     return render_template('account.html', title='Account',
-                           image_file=image_file, form=form)
-
-
-@app.route("/post/new", methods=['GET', 'POST'])
-@login_required
-def new_post():
-    form = PostForm()
-    if form.validate_on_submit():
-        post = Post(title=form.title.data, content = form.content.data, author=current_user)
-        db.session.add(post)
-        db.session.commit()
-        flash('Your post has been created!', 'success')
-        return redirect(url_for('home'))
-
-
-    return render_template('create_post.html', title='New Post', form=form, legend = 'New Post')
+                           image_file=image_file, form=form, user=current_user)
 
 
 
 
-
-@app.route("/post/<int:post_id>")
-def post(post_id):
-    post = Post.query.get_or_404(post_id)
-    return render_template('post.html', title=post.title, post=post)
-
-
-@app.route("/post/<int:post_id>/update", methods=['GET', 'POST'])
-def update_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    if post.author != current_user:
-        abort(403)
-    form = PostForm()
-    if form.validate_on_submit():
-        post.title = form.title.data
-        post.content = form.content.data
-        db.session.commit()
-        flash('Post has been updated', 'success')
-        return redirect(url_for('post', post_id =post.id))
-    elif request.method == 'GET':
-        form.title.data = post.title
-        form.content.data = post.content
-
-
-    return render_template('create_post.html', title='Update Post', form = form, legend = 'Update Post')
-
-@app.route("/post/<int:post_id>/delete", methods=['POST'])
-@login_required
-def delete_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    if post.author != current_user:
-        abort(403)
-    db.session.delete(post)
-    db.session.commit()
-    flash('Your post has been deleted!', 'success')
-    return redirect(url_for('home'))
-
-
-@app.route("/liked/<int:user_id>", methods=['POST'])
-@login_required
-def liked(user_id):
-    liked_user = User.query(user_id)
-    if user.id == current_user:
-        abort(403)
-
-    
-    print("got this far")
-    print(user_id)
-    
-    #liked = Likes(current_user= current_user, liked_user = user_id)
-    #db.session.add(liked)
-    #db.session.commit()
-    
-    #flash('like has been added!', 'success')
-    return redirect(url_for('home'))
 
 
 @app.route('/follow/<username>', methods=['POST'])
@@ -231,3 +161,20 @@ def matched():
         #users = User.query.all()
         matches = current_user.followed_posts().all()
         return render_template('matched.html', title='Matched', matches = matches)
+
+@app.route("/user/<int:user_id>/delete", methods=['POST'])
+@login_required
+def delete_user(user_id):
+    form = EmptyForm()
+    user = User.query.get_or_404(user_id)
+    print(user_id)
+    if user.id != current_user.id:
+        abort(403)
+    db.session.delete(user)
+    db.session.commit()
+    flash('Your account has been deleted!', 'success')
+    form = EmptyForm()
+    return redirect(url_for('login'))
+
+
+
