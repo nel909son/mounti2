@@ -56,7 +56,7 @@ class UpdateAccountForm(FlaskForm):
             if user:
                 raise ValidationError('That email is taken. Please choose a different one.')
 
-
+#needed an empty form class to do likes/unlikes
 class EmptyForm(FlaskForm):
     submit = SubmitField('Submit')
 
