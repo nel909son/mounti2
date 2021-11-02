@@ -64,10 +64,10 @@ def login():
 @login_required
 def user(username):
     page = request.args.get('page', 1, type=int)
-    posts = Post.query.paginate(page = page, per_page = 1)
+    
     users = User.query.paginate(page = page, per_page = 1)
     form = EmptyForm()
-    return render_template('home.html', users=users, posts=posts, form=form)
+    return render_template('home.html', users=users,  form=form)
 
 @app.route("/")
 @app.route("/logout")
